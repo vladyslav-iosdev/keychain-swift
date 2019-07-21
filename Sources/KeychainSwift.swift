@@ -87,15 +87,27 @@ open class KeychainSwift {
     delete(key) // Delete any existing key before saving it
 
     let accessible = access?.value ?? KeychainSwiftAccessOptions.defaultOption.value
-      
+    let userPresenceRequired = access?.userPresenceRequired ?? false
+
     let prefixedKey = keyWithPrefix(key)
-      
+    let accessControl = SecAccessControlCreateWithFlags(
+        nil,
+        kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+        .userPresence,
+        nil
+    )
+
     var query: [String : Any] = [
       KeychainSwiftConstants.klass       : kSecClassGenericPassword,
       KeychainSwiftConstants.attrAccount : prefixedKey,
       KeychainSwiftConstants.valueData   : value,
-      KeychainSwiftConstants.accessible  : accessible
     ]
+
+    if userPresenceRequired {
+        query[String(kSecAttrAccessControl)] = accessControl
+    } else {
+        query[KeychainSwiftConstants.accessible] = accessible
+    }
       
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: true)
@@ -135,8 +147,8 @@ open class KeychainSwift {
   - returns: The text value from the keychain. Returns nil if unable to read the item.
   
   */
-  open func get(_ key: String) -> String? {
-    if let data = getData(key) {
+  open func get(_ key: String, prompt: String? = nil) -> String? {
+    if let data = getData(key, prompt: prompt) {
       
       if let currentString = String(data: data, encoding: .utf8) {
         return currentString
@@ -156,7 +168,7 @@ open class KeychainSwift {
   - returns: The text value from the keychain. Returns nil if unable to read the item.
   
   */
-  open func getData(_ key: String) -> Data? {
+  open func getData(_ key: String, prompt: String? = nil) -> Data? {
     // The lock prevents the code to be run simlultaneously
     // from multiple threads which may result in crashing
     readLock.lock()
@@ -170,7 +182,10 @@ open class KeychainSwift {
       KeychainSwiftConstants.returnData  : kCFBooleanTrue,
       KeychainSwiftConstants.matchLimit  : kSecMatchLimitOne
     ]
-    
+
+    if let prompt = prompt {
+      query[kSecUseOperationPrompt as String] = prompt
+    }
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: false)
     lastQueryParameters = query
@@ -194,8 +209,8 @@ open class KeychainSwift {
   - returns: The boolean value from the keychain. Returns nil if unable to read the item.
 
   */
-  open func getBool(_ key: String) -> Bool? {
-    guard let data = getData(key) else { return nil }
+  open func getBool(_ key: String, prompt: String? = nil) -> Bool? {
+    guard let data = getData(key, prompt: prompt) else { return nil }
     guard let firstBit = data.first else { return nil }
     return firstBit == 1
   }

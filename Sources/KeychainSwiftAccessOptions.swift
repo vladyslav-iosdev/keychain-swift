@@ -25,7 +25,7 @@ public enum KeychainSwiftAccessOptions {
   This is recommended for items that need to be accessible only while the application is in the foreground. Items with this attribute do not migrate to a new device. Thus, after restoring from a backup of a different device, these items will not be present.
   
   */
-  case accessibleWhenUnlockedThisDeviceOnly
+  case accessibleWhenUnlockedThisDeviceOnly(userPresenceRequired: Bool)
   
   /**
   
@@ -98,6 +98,31 @@ public enum KeychainSwiftAccessOptions {
       
     case .accessibleAlwaysThisDeviceOnly:
       return toString(kSecAttrAccessibleAlwaysThisDeviceOnly)
+    }
+  }
+
+  var userPresenceRequired: Bool {
+    switch self {
+    case .accessibleWhenUnlocked:
+      return false
+
+    case .accessibleWhenUnlockedThisDeviceOnly(let userPresenceRequired):
+      return userPresenceRequired
+
+    case .accessibleAfterFirstUnlock:
+      return false
+
+    case .accessibleAfterFirstUnlockThisDeviceOnly:
+      return false
+
+    case .accessibleAlways:
+      return false
+
+    case .accessibleWhenPasscodeSetThisDeviceOnly:
+      return false
+
+    case .accessibleAlwaysThisDeviceOnly:
+      return false
     }
   }
   
