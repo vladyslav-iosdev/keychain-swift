@@ -1,5 +1,6 @@
 import Security
 import Foundation
+import LocalAuthentication
 
 /**
 
@@ -147,8 +148,8 @@ open class KeychainSwift {
   - returns: The text value from the keychain. Returns nil if unable to read the item.
   
   */
-  open func get(_ key: String, prompt: String? = nil) -> String? {
-    if let data = getData(key, prompt: prompt) {
+  open func get(_ key: String, prompt: String? = nil, withContext context: LAContext? = nil) -> String? {
+    if let data = getData(key, prompt: prompt, withContext: context) {
       
       if let currentString = String(data: data, encoding: .utf8) {
         return currentString
@@ -168,7 +169,7 @@ open class KeychainSwift {
   - returns: The text value from the keychain. Returns nil if unable to read the item.
   
   */
-  open func getData(_ key: String, prompt: String? = nil) -> Data? {
+  open func getData(_ key: String, prompt: String? = nil, withContext context: LAContext? = nil) -> Data? {
     // The lock prevents the code to be run simlultaneously
     // from multiple threads which may result in crashing
     readLock.lock()
@@ -180,8 +181,12 @@ open class KeychainSwift {
       KeychainSwiftConstants.klass       : kSecClassGenericPassword,
       KeychainSwiftConstants.attrAccount : prefixedKey,
       KeychainSwiftConstants.returnData  : kCFBooleanTrue,
-      KeychainSwiftConstants.matchLimit  : kSecMatchLimitOne
+      KeychainSwiftConstants.matchLimit  : kSecMatchLimitOne,
     ]
+
+    if let context = context, #available(iOS 9, *) {
+      query[KeychainSwiftConstants.useAuthenticationContext] = context
+    }
 
     if let prompt = prompt {
       query[kSecUseOperationPrompt as String] = prompt
@@ -209,8 +214,8 @@ open class KeychainSwift {
   - returns: The boolean value from the keychain. Returns nil if unable to read the item.
 
   */
-  open func getBool(_ key: String, prompt: String? = nil) -> Bool? {
-    guard let data = getData(key, prompt: prompt) else { return nil }
+  open func getBool(_ key: String, prompt: String? = nil, withContext context: LAContext? = nil) -> Bool? {
+    guard let data = getData(key, prompt: prompt, withContext: context) else { return nil }
     guard let firstBit = data.first else { return nil }
     return firstBit == 1
   }
