@@ -33,6 +33,8 @@ public struct KeychainSwiftConstants {
   
   /// Used for specifying a value when setting a Keychain value.
   public static var valueData: String { return toString(kSecValueData) }
+
+  @available(iOS 9.0, OSX 10.11, *) @available(watchOS, unavailable) public static var ui: String { return toString(kSecUseAuthenticationUI) }
   
   static func toString(_ value: CFString) -> String {
     return value as String

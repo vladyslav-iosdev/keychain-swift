@@ -161,6 +161,45 @@ open class KeychainSwift {
     return nil
   }
 
+  open func isPresentValue(for key: String) -> Bool {
+    // The lock prevents the code to be run simlultaneously
+    // from multiple threads which may result in crashing
+    readLock.lock()
+    defer { readLock.unlock() }
+
+    let prefixedKey = keyWithPrefix(key)
+
+    var query: [String: Any] = [
+        KeychainSwiftConstants.klass       : kSecClassGenericPassword,
+        KeychainSwiftConstants.attrAccount : prefixedKey,
+        KeychainSwiftConstants.returnData  : kCFBooleanTrue,
+        KeychainSwiftConstants.matchLimit  : kSecMatchLimitOne
+    ]
+
+    if #available(iOS 9, *) {
+      query[KeychainSwiftConstants.ui] = kSecUseAuthenticationUIFail
+    }
+
+    query = addAccessGroupWhenPresent(query)
+    query = addSynchronizableIfRequired(query, addingItems: false)
+    lastQueryParameters = query
+
+    var result: AnyObject?
+
+    lastResultCode = withUnsafeMutablePointer(to: &result) {
+      SecItemCopyMatching(query as CFDictionary, UnsafeMutablePointer($0))
+    }
+
+    switch lastResultCode {
+    case errSecSuccess, errSecInteractionNotAllowed:
+        return true
+    case errSecItemNotFound:
+        return false
+    default:
+        return false
+    }
+  }
+
   /**
   
   Retrieves the data from the keychain that corresponds to the given key.
